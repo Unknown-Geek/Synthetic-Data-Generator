@@ -2,3 +2,5 @@ flask
 ctgan
 pandas
 scikit-learn
+werkzeug
+sdv
