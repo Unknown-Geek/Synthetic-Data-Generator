@@ -1,3 +1,100 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --glass-bg: rgba(17, 25, 40, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.125);
+}
+
+body {
+  @apply bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 min-h-screen;
+  background-attachment: fixed;
+}
+
+.glass-container {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--glass-border);
+}
+
+/* File input reset and styling */
+input[type="file"] {
+  @apply bg-gray-800/50 border border-gray-700/50 rounded-lg p-3;
+}
+
+input[type="file"]::-webkit-file-upload-button,
+input[type="file"]::file-selector-button {
+  @apply bg-violet-600 text-white px-4 py-2 rounded-lg mr-4 border-0 cursor-pointer 
+         hover:bg-violet-500 transition-all duration-300;
+}
+
+input[type="number"],
+input[type="text"] {
+  @apply bg-gray-800/50 text-white border border-gray-700/50 rounded-lg p-3
+         focus:border-violet-500 focus:ring-2 focus:ring-violet-500/50 transition-all duration-300;
+}
+
+.checkbox-container {
+  @apply bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 rounded-lg p-4 flex flex-wrap gap-3;
+}
+
+.checkbox-container label {
+  @apply cursor-pointer text-sm text-white py-2 px-4 rounded-lg transition-all duration-300;
+}
+
+.checkbox-container label:hover {
+  @apply bg-violet-500;
+}
+
+.checkbox-container input[type="checkbox"]:checked + label {
+  @apply bg-violet-600;
+}
+
+/* Focus styles */
+input:focus {
+  @apply outline-none ring-2 ring-accent ring-opacity-50;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+.animate-pulse-slow {
+  animation: pulse 2s infinite;
+}
+
+/* Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-gray-800/30 rounded-full;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-violet-600/50 rounded-full hover:bg-violet-500/50 transition-colors;
+}

@@ -8,6 +8,7 @@ import os
 from datetime import datetime
 import logging
 from typing import List, Dict, Optional
+import shutil
 
 class SyntheticDataPipeline:
     def __init__(
@@ -19,22 +20,44 @@ class SyntheticDataPipeline:
     ):
         self.input_file = input_file
         self.categorical_columns = categorical_columns
-        self.output_dir = output_dir
+        self.output_dir = os.path.abspath(output_dir)
         self.metadata = metadata or {}
+        
+        # Ensure output directory exists and is empty
+        os.makedirs(self.output_dir, exist_ok=True)
+        self._cleanup_output_directory()
         self.logger = self._setup_logging()
-        os.makedirs(output_dir, exist_ok=True)
+
+    def _cleanup_output_directory(self):
+        """Remove all files in the output directory except .gitkeep"""
+        for filename in os.listdir(self.output_dir):
+            if filename != '.gitkeep':
+                file_path = os.path.join(self.output_dir, filename)
+                try:
+                    if os.path.isfile(file_path):
+                        os.unlink(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                except Exception as e:
+                    print(f'Error deleting {file_path}: {e}')
 
     def _setup_logging(self) -> logging.Logger:
         logger = logging.getLogger("SyntheticDataPipeline")
         logger.setLevel(logging.INFO)
+        
+        # Clear any existing handlers
+        if logger.handlers:
+            logger.handlers.clear()
+            
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
-        fh = logging.FileHandler(
-            os.path.join(self.output_dir, "pipeline.log")
-        )
+        
+        log_file = os.path.join(self.output_dir, "pipeline.log")
+        fh = logging.FileHandler(log_file)
         fh.setFormatter(formatter)
         logger.addHandler(fh)
+        
         return logger
 
     def load_data(self) -> pd.DataFrame:

@@ -1,14 +1,39 @@
 # app.py
 from flask import Flask, request, send_file, jsonify
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
+import traceback
+import logging
+import shutil
 from synthetic_data_pipeline import SyntheticDataPipeline
 
+# Setup logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
+CORS(app)
 app.config['UPLOAD_FOLDER'] = 'temp_uploads'
+app.config['OUTPUT_FOLDER'] = 'output'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
+# Create necessary directories
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
+
+def cleanup_output_directory(directory):
+    """Remove all files in the output directory except .gitkeep"""
+    for filename in os.listdir(directory):
+        if filename != '.gitkeep':
+            file_path = os.path.join(directory, filename)
+            try:
+                if os.path.isfile(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                logger.error(f'Error deleting {file_path}: {e}')
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -16,48 +41,77 @@ def health_check():
 
 @app.route('/generate', methods=['POST'])
 def generate_synthetic_data():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
-        
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
-
     try:
+        # Clean up output directory before starting
+        cleanup_output_directory(app.config['OUTPUT_FOLDER'])
+        logger.info("Cleaned up output directory")
+
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file provided'}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
         # Save uploaded file
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
 
+        logger.info(f"File saved to {filepath}")
+
         # Get configuration from request
         config = request.form.to_dict()
-        categorical_columns = config.get('categorical_columns', '').split(',')
-        num_samples = int(config.get('num_samples', 1000))
-        metadata = config.get('metadata', {})
+        categorical_columns = [
+            col.strip() 
+            for col in config.get('categorical_columns', '').replace('"', '').replace("'", '').split(',')
+            if col.strip()
+        ]
+        
+        if not categorical_columns:
+            return jsonify({'error': 'No valid categorical columns provided'}), 400
+            
+        try:
+            num_samples = int(config.get('num_samples', 1000))
+        except ValueError:
+            return jsonify({'error': 'Invalid number of samples'}), 400
+
+        logger.info(f"Processing with categorical columns: {categorical_columns}")
+        logger.info(f"Number of samples requested: {num_samples}")
 
         # Run pipeline
         pipeline = SyntheticDataPipeline(
             input_file=filepath,
             categorical_columns=categorical_columns,
-            metadata=metadata
+            output_dir=os.path.abspath(app.config['OUTPUT_FOLDER'])
         )
+        
         pipeline.run_pipeline(num_samples=num_samples)
 
         # Get latest generated file
         output_dir = pipeline.output_dir
         files = [f for f in os.listdir(output_dir) if f.startswith("synthetic_data_")]
+        
+        if not files:
+            raise Exception("No output file generated")
+            
         latest_file = sorted(files)[-1]
+        output_path = os.path.join(output_dir, latest_file)
+        
+        logger.info(f"Sending file: {output_path}")
         
         # Clean up
         os.remove(filepath)
         
         return send_file(
-            os.path.join(output_dir, latest_file),
+            output_path,
             as_attachment=True,
             download_name='synthetic_data.csv'
         )
 
     except Exception as e:
+        logger.error(f"Error in generate_synthetic_data: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

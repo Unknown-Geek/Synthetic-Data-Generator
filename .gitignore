@@ -18,5 +18,6 @@ instance/
 .webassets-cache
 
 # Test synthetic dataset files
-test_real_dataset.csv
-test_synthetic_dataset.csv
+test_data.csv
+output
+temp_uploads
