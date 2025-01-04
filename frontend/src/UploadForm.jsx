@@ -79,7 +79,7 @@ const UploadForm = () => {
     formData.append('num_samples', numSamples);
 
     try {
-      const response = await axios.post('/generate', formData, {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/generate`, formData, {
         responseType: 'blob',
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -207,6 +207,13 @@ const UploadForm = () => {
         {error && (
           <div className="mt-6 p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-center animate-fade-in">
             {error}
+          </div>
+        )}
+
+        {/* Validation Error Message */}
+        {validationError && (
+          <div className="text-red-500 text-sm mt-2">
+            {validationError}
           </div>
         )}
 
