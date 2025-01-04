@@ -94,43 +94,55 @@ class SyntheticDataPipeline:
         self,
         data: pd.DataFrame,
         num_samples: int = 1000,
-        epochs: int = 100,
-        chunk_size: int = 10000
+        epochs: int = 50,  # Reduced epochs
+        chunk_size: int = 1000  # Smaller chunks
     ) -> pd.DataFrame:
         self.logger.info("Starting synthetic data generation")
         try:
             processed_data = data.copy()
             
-            # Process only user-selected categorical columns and numeric columns
-            all_columns = set(processed_data.columns)
-            categorical_columns = set(self.categorical_columns)
-            
-            for col in all_columns:
-                if col in categorical_columns:
-                    # For categorical columns, convert to string type
-                    processed_data[col] = processed_data[col].astype(str)
-                elif self._is_numeric_column(processed_data, col):
-                    # For numeric columns, convert and handle NaN values
-                    processed_data[col] = pd.to_numeric(processed_data[col], errors='coerce')
-                    processed_data[col] = processed_data[col].fillna(processed_data[col].mean())
-                else:
-                    # Drop columns that are neither user-selected categorical nor numeric
-                    self.logger.warning(f"Dropping column {col} - not selected as categorical and contains non-numeric data")
-                    processed_data = processed_data.drop(columns=[col])
+            # Reduce memory usage by converting to smaller dtypes
+            for col in processed_data.columns:
+                if processed_data[col].dtype == 'int64':
+                    processed_data[col] = processed_data[col].astype('int32')
+                elif processed_data[col].dtype == 'float64':
+                    processed_data[col] = processed_data[col].astype('float32')
+                elif processed_data[col].dtype == 'object':
+                    processed_data[col] = processed_data[col].astype('category')
 
-            self.logger.info(f"Processing columns. Selected categorical columns: {self.categorical_columns}")
+            # Process in smaller batches
+            synthetic_pieces = []
+            samples_per_chunk = max(1, num_samples // (len(processed_data) // chunk_size))
             
-            # Train CTGAN in chunks
-            synthesizer = CTGAN(epochs=epochs)
             for start in range(0, len(processed_data), chunk_size):
-                end = start + chunk_size
+                end = min(start + chunk_size, len(processed_data))
                 chunk = processed_data[start:end]
+                
+                # Use a more memory-efficient configuration for CTGAN
+                synthesizer = CTGAN(
+                    epochs=epochs,
+                    batch_size=min(100, len(chunk)),
+                    generator_dim=(64, 64),  # Smaller network
+                    discriminator_dim=(64, 64)  # Smaller network
+                )
+                
                 synthesizer.fit(chunk, discrete_columns=self.categorical_columns)
+                synthetic_chunk = synthesizer.sample(samples_per_chunk)
+                synthetic_pieces.append(synthetic_chunk)
+                
+                # Clear memory
+                del synthesizer
+                import gc
+                gc.collect()
+                
                 self.logger.info(f"Processed chunk {start} to {end}")
 
-            synthetic_data = synthesizer.sample(num_samples)
+            # Combine all pieces
+            synthetic_data = pd.concat(synthetic_pieces, ignore_index=True)
+            if len(synthetic_data) > num_samples:
+                synthetic_data = synthetic_data.sample(n=num_samples)
             
-            self.logger.info(f"Generated {num_samples} synthetic samples")
+            self.logger.info(f"Generated {len(synthetic_data)} synthetic samples")
             return synthetic_data
             
         except Exception as e:

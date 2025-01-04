@@ -1,0 +1,26 @@
+services:
+  # Backend API
+  - type: web
+    name: synthetic-data-generator-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --preload --workers 1 --threads 2
+    plan: free
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: PORT
+        value: 8080
+
+  # Frontend Web App
+  - type: web
+    name: synthetic-data-generator-frontend
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npx serve -s build
+    plan: free
+    envVars:
+      - key: NODE_VERSION
+        value: 16
+      - key: NODE_OPTIONS
+        value: --openssl-legacy-provider

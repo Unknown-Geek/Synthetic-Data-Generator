@@ -1,4 +1,5 @@
 {
+    "version": 2,
     "buildCommand": "npm run build",
     "outputDirectory": "build",
     "framework": "create-react-app",
@@ -9,6 +10,7 @@
       }
     ],
     "env": {
-      "NODE_OPTIONS": "--openssl-legacy-provider"
+      "NODE_OPTIONS": "--openssl-legacy-provider",
+      "REACT_APP_API_URL": "https://synthetic-data-generator-backend-production.up.railway.app"
     }
 }

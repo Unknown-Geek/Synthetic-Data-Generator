@@ -15,7 +15,14 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)
+# Setup CORS with Render domains
+CORS(app, origins=[
+    "http://localhost:3000",
+    "http://localhost:8080",
+    "https://synthetic-data-generator-frontend.onrender.com",
+    "https://synthetic-data-generator.onrender.com",
+    "https://synthetic-data-generator.vercel.app"
+], supports_credentials=True)
 app.config['UPLOAD_FOLDER'] = 'temp_uploads'
 app.config['OUTPUT_FOLDER'] = 'output'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -128,5 +135,6 @@ def generate_synthetic_data():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    # Use Render's PORT environment variable
+    port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port)
