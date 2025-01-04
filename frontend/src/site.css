@@ -98,3 +98,26 @@ input:focus {
 .custom-scrollbar::-webkit-scrollbar-thumb {
   @apply bg-violet-600/50 rounded-full hover:bg-violet-500/50 transition-colors;
 }
+
+/* File input styling */
+.file-input-wrapper {
+  @apply relative flex items-center justify-center w-full;
+}
+
+.file-input-wrapper input[type="file"] {
+  @apply opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10;
+}
+
+.file-input-button {
+  @apply w-full bg-gray-800/50 border-2 border-dashed border-gray-600 
+         rounded-lg p-6 text-center cursor-pointer transition-all duration-300
+         hover:border-violet-500 hover:bg-gray-700/50;
+}
+
+.file-input-button .icon {
+  @apply text-violet-500 mb-2 mx-auto;
+}
+
+.file-input-button .text {
+  @apply text-gray-300;
+}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { API_URL } from './index';
 
 const UploadForm = () => {
   const [file, setFile] = useState(null);
@@ -79,7 +80,7 @@ const UploadForm = () => {
     formData.append('num_samples', numSamples);
 
     try {
-      const response = await axios.post('/generate', formData, {
+      const response = await axios.post(`${API_URL}/generate`, formData, {
         responseType: 'blob',
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -139,13 +140,36 @@ const UploadForm = () => {
         {/* File Upload Section */}
         <div className="md:col-span-2 animate-slide-in" style={{ animationDelay: '0.1s' }}>
             <label className="block text-white mb-2 font-semibold" style={{ fontSize: '23px' }}>Upload CSV File</label>
-            <div className="relative">
+            <div className="file-input-wrapper">
                 <input 
                     type="file" 
                     onChange={handleFileChange}
                     accept=".csv"
-                    className="w-full text-white transition-all duration-300 hover:border-violet-500"
+                    className="file-input"
                 />
+                <div className="file-input-button">
+                    <div className="icon">
+                        {file ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                        )}
+                    </div>
+                    <div className="text">
+                        {file ? (
+                            <span>Selected: {file.name}</span>
+                        ) : (
+                            <span>
+                                <span className="font-semibold">Click to upload</span> or drag and drop<br />
+                                <span className="text-sm text-gray-400">CSV files only</span>
+                            </span>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
 
