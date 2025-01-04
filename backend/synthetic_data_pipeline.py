@@ -9,6 +9,7 @@ from datetime import datetime
 import logging
 from typing import List, Dict, Optional
 import shutil
+import tempfile
 
 class SyntheticDataPipeline:
     def __init__(
@@ -22,14 +23,21 @@ class SyntheticDataPipeline:
         self.categorical_columns = categorical_columns
         self.output_dir = os.path.abspath(output_dir)
         self.metadata = metadata or {}
+        self.logger = None
         
         # Ensure output directory exists and is empty
         os.makedirs(self.output_dir, exist_ok=True)
         self._cleanup_output_directory()
-        self.logger = self._setup_logging()
+        self._setup_logging()
 
     def _cleanup_output_directory(self):
         """Remove all files in the output directory except .gitkeep"""
+        # Close logging handlers before cleanup
+        if self.logger:
+            for handler in self.logger.handlers:
+                handler.close()
+            self.logger.handlers.clear()
+
         for filename in os.listdir(self.output_dir):
             if filename != '.gitkeep':
                 file_path = os.path.join(self.output_dir, filename)
@@ -41,24 +49,28 @@ class SyntheticDataPipeline:
                 except Exception as e:
                     print(f'Error deleting {file_path}: {e}')
 
-    def _setup_logging(self) -> logging.Logger:
-        logger = logging.getLogger("SyntheticDataPipeline")
-        logger.setLevel(logging.INFO)
+    def _setup_logging(self) -> None:
+        """Setup logging with a temporary log file."""
+        self.logger = logging.getLogger("SyntheticDataPipeline")
+        self.logger.setLevel(logging.INFO)
         
         # Clear any existing handlers
-        if logger.handlers:
-            logger.handlers.clear()
+        if self.logger.handlers:
+            for handler in self.logger.handlers:
+                handler.close()
+            self.logger.handlers.clear()
             
         formatter = logging.Formatter(
             '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         )
         
-        log_file = os.path.join(self.output_dir, "pipeline.log")
+        # Use a temporary directory for the log file
+        temp_dir = tempfile.gettempdir()
+        log_file = os.path.join(temp_dir, "pipeline.log")
+        
         fh = logging.FileHandler(log_file)
         fh.setFormatter(formatter)
-        logger.addHandler(fh)
-        
-        return logger
+        self.logger.addHandler(fh)
 
     def load_data(self) -> pd.DataFrame:
         self.logger.info(f"Loading data from {self.input_file}")
@@ -82,7 +94,8 @@ class SyntheticDataPipeline:
         self,
         data: pd.DataFrame,
         num_samples: int = 1000,
-        epochs: int = 100
+        epochs: int = 100,
+        chunk_size: int = 10000
     ) -> pd.DataFrame:
         self.logger.info("Starting synthetic data generation")
         try:
@@ -107,9 +120,14 @@ class SyntheticDataPipeline:
 
             self.logger.info(f"Processing columns. Selected categorical columns: {self.categorical_columns}")
             
-            # Train CTGAN
+            # Train CTGAN in chunks
             synthesizer = CTGAN(epochs=epochs)
-            synthesizer.fit(processed_data, discrete_columns=self.categorical_columns)
+            for start in range(0, len(processed_data), chunk_size):
+                end = start + chunk_size
+                chunk = processed_data[start:end]
+                synthesizer.fit(chunk, discrete_columns=self.categorical_columns)
+                self.logger.info(f"Processed chunk {start} to {end}")
+
             synthetic_data = synthesizer.sample(num_samples)
             
             self.logger.info(f"Generated {num_samples} synthetic samples")
@@ -188,10 +206,17 @@ class SyntheticDataPipeline:
         self.logger.info(f"Saved synthetic data to {output_file}")
         self.logger.info(f"Saved metadata to {metadata_file}")
 
-    def run_pipeline(self, num_samples: int = 1000) -> None:
+    def run_pipeline(self, num_samples: int = 1000, chunk_size: int = 10000, **kwargs) -> None:
+        """
+        Run the synthetic data generation pipeline.
+        
+        Args:
+            num_samples: Number of synthetic samples to generate
+            **kwargs: Additional arguments passed to generate_synthetic_data
+        """
         try:
             real_data = self.load_data()
-            synthetic_data = self.generate_synthetic_data(real_data, num_samples)
+            synthetic_data = self.generate_synthetic_data(real_data, num_samples=num_samples, chunk_size=chunk_size, **kwargs)
             validation_metrics = self.validate_synthetic_data(real_data, synthetic_data)
             self.save_outputs(synthetic_data, validation_metrics)
             self.logger.info("Pipeline completed successfully")

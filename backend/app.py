@@ -88,14 +88,18 @@ def generate_synthetic_data():
         logger.info(f"Processing with categorical columns: {categorical_columns}")
         logger.info(f"Number of samples requested: {num_samples}")
 
-        # Run pipeline
+        # Run pipeline with kwargs
         pipeline = SyntheticDataPipeline(
             input_file=filepath,
             categorical_columns=categorical_columns,
             output_dir=os.path.abspath(app.config['OUTPUT_FOLDER'])
         )
         
-        pipeline.run_pipeline(num_samples=num_samples)
+        pipeline.run_pipeline(
+            num_samples=num_samples,
+            epochs=100,
+            chunk_size=10000
+        )
 
         # Get latest generated file
         output_dir = pipeline.output_dir

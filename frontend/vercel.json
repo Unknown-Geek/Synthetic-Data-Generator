@@ -1,21 +1,14 @@
 {
-    "version": 2,
-    "builds": [
+    "buildCommand": "npm run build",
+    "outputDirectory": "build",
+    "framework": "create-react-app",
+    "rewrites": [
       {
-        "src": "package.json",
-        "use": "@vercel/static-build",
-        "config": {
-          "distDir": "build",
-          "env": {
-            "CI": "false"
-          }
-        }
+        "source": "/(.*)",
+        "destination": "/index.html"
       }
     ],
-    "routes": [
-      {
-        "src": "/(.*)",
-        "dest": "/index.html"
-      }
-    ]
-  }
+    "env": {
+      "NODE_OPTIONS": "--openssl-legacy-provider"
+    }
+}
