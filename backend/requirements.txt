@@ -1,8 +1,6 @@
-flask
-flask-cors
-ctgan
-pandas
-scikit-learn
-werkzeug
-sdv
+flask==2.0.1
+flask-cors==3.0.10
+pandas==1.5.3
+werkzeug==2.0.3
+sdv==1.2.1
 gunicorn==21.2.0

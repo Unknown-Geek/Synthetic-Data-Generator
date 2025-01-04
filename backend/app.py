@@ -8,6 +8,7 @@ import traceback
 import logging
 import shutil
 from synthetic_data_pipeline import SyntheticDataPipeline
+import time
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
@@ -30,19 +31,22 @@ def cleanup_output_directory(directory):
             file_path = os.path.join(directory, filename)
             try:
                 if os.path.isfile(file_path):
-                    os.unlink(file_path)
+                    # Add retry logic for locked files
+                    max_retries = 3
+                    for _ in range(max_retries):
+                        try:
+                            os.unlink(file_path)
+                            break
+                        except PermissionError:
+                            time.sleep(1)  # Wait before retry
                 elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
+                    shutil.rmtree(file_path, ignore_errors=True)
             except Exception as e:
                 logger.error(f'Error deleting {file_path}: {e}')
 
 @app.route('/health', methods=['GET'])
 def health_check():
     return jsonify({"status": "healthy"}), 200
-
-@app.route('/health', methods=['GET'])
-def health_check():
-    return jsonify({'status': 'healthy'})
 
 @app.route('/generate', methods=['POST'])
 def generate_synthetic_data():
