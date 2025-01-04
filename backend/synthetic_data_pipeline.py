@@ -88,9 +88,12 @@ class SyntheticDataPipeline:
         try:
             processed_data = data.copy()
             
-            # Process all columns based on whether they're categorical or not
-            for col in processed_data.columns:
-                if col in self.categorical_columns:
+            # Process only user-selected categorical columns and numeric columns
+            all_columns = set(processed_data.columns)
+            categorical_columns = set(self.categorical_columns)
+            
+            for col in all_columns:
+                if col in categorical_columns:
                     # For categorical columns, convert to string type
                     processed_data[col] = processed_data[col].astype(str)
                 elif self._is_numeric_column(processed_data, col):
@@ -98,13 +101,11 @@ class SyntheticDataPipeline:
                     processed_data[col] = pd.to_numeric(processed_data[col], errors='coerce')
                     processed_data[col] = processed_data[col].fillna(processed_data[col].mean())
                 else:
-                    # For any other columns, treat as categorical
-                    self.logger.warning(f"Column {col} not specified as categorical but contains non-numeric data")
-                    processed_data[col] = processed_data[col].astype(str)
-                    if col not in self.categorical_columns:
-                        self.categorical_columns.append(col)
+                    # Drop columns that are neither user-selected categorical nor numeric
+                    self.logger.warning(f"Dropping column {col} - not selected as categorical and contains non-numeric data")
+                    processed_data = processed_data.drop(columns=[col])
 
-            self.logger.info(f"Processed columns. Categorical: {self.categorical_columns}")
+            self.logger.info(f"Processing columns. Selected categorical columns: {self.categorical_columns}")
             
             # Train CTGAN
             synthesizer = CTGAN(epochs=epochs)
@@ -123,25 +124,38 @@ class SyntheticDataPipeline:
         real_data: pd.DataFrame,
         synthetic_data: pd.DataFrame
     ) -> Dict:
+        """Validate synthetic data against real data for specified categorical columns."""
         self.logger.info("Validating synthetic data")
+        
+        # Ensure all categorical columns exist in both dataframes
+        missing_cols_real = set(self.categorical_columns) - set(real_data.columns)
+        missing_cols_synth = set(self.categorical_columns) - set(synthetic_data.columns)
+        
+        if missing_cols_real or missing_cols_synth:
+            self.logger.error(f"Missing columns in real data: {missing_cols_real}")
+            self.logger.error(f"Missing columns in synthetic data: {missing_cols_synth}")
+            raise ValueError("Not all categorical columns present in both datasets")
+        
+        # Filter both dataframes to only include existing categorical columns
+        valid_categorical_columns = [
+            col for col in self.categorical_columns 
+            if col in real_data.columns and col in synthetic_data.columns
+        ]
+        
         metrics = {
-            "real_shape": real_data.shape,
-            "synthetic_shape": synthetic_data.shape,
-            "column_match": all(real_data.columns == synthetic_data.columns),
+            "real_shape": real_data[valid_categorical_columns].shape,
+            "synthetic_shape": synthetic_data[valid_categorical_columns].shape,
+            "column_match": sorted(valid_categorical_columns) == sorted(self.categorical_columns),
             "basic_stats": {}
         }
         
-        for col in real_data.columns:
-            if (col in self.categorical_columns):
-                metrics["basic_stats"][col] = {
-                    "unique_values_real": real_data[col].nunique(),
-                    "unique_values_synthetic": synthetic_data[col].nunique()
-                }
-            else:
-                metrics["basic_stats"][col] = {
-                    "mean_diff": abs(real_data[col].mean() - synthetic_data[col].mean()),
-                    "std_diff": abs(real_data[col].std() - synthetic_data[col].std())
-                }
+        # Only validate categorical columns that exist in both datasets
+        for col in valid_categorical_columns:
+            metrics["basic_stats"][col] = {
+                "unique_values_real": real_data[col].nunique(),
+                "unique_values_synthetic": synthetic_data[col].nunique()
+            }
+            
         return metrics
 
     def save_outputs(
@@ -149,14 +163,20 @@ class SyntheticDataPipeline:
         synthetic_data: pd.DataFrame,
         validation_metrics: Dict
     ) -> None:
+        """Save synthetic data and metadata."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Filter only categorical columns for output
+        output_data = synthetic_data[self.categorical_columns].copy()
+        
+        # Save filtered data
         output_file = os.path.join(self.output_dir, f"synthetic_data_{timestamp}.csv")
-        synthetic_data.to_csv(output_file, index=False)
+        output_data.to_csv(output_file, index=False)
         
         metadata = {
             "generation_timestamp": timestamp,
             "original_file": self.input_file,
-            "num_samples": len(synthetic_data),
+            "num_samples": len(output_data),
             "categorical_columns": self.categorical_columns,
             "validation_metrics": validation_metrics,
             **self.metadata
