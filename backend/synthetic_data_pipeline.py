@@ -70,6 +70,14 @@ class SyntheticDataPipeline:
             self.logger.error(f"Error loading data: {str(e)}")
             raise
 
+    def _is_numeric_column(self, data: pd.DataFrame, column: str) -> bool:
+        """Check if a column is numeric."""
+        try:
+            pd.to_numeric(data[column])
+            return True
+        except (ValueError, TypeError):
+            return False
+
     def generate_synthetic_data(
         self,
         data: pd.DataFrame,
@@ -78,11 +86,34 @@ class SyntheticDataPipeline:
     ) -> pd.DataFrame:
         self.logger.info("Starting synthetic data generation")
         try:
+            processed_data = data.copy()
+            
+            # Process all columns based on whether they're categorical or not
+            for col in processed_data.columns:
+                if col in self.categorical_columns:
+                    # For categorical columns, convert to string type
+                    processed_data[col] = processed_data[col].astype(str)
+                elif self._is_numeric_column(processed_data, col):
+                    # For numeric columns, convert and handle NaN values
+                    processed_data[col] = pd.to_numeric(processed_data[col], errors='coerce')
+                    processed_data[col] = processed_data[col].fillna(processed_data[col].mean())
+                else:
+                    # For any other columns, treat as categorical
+                    self.logger.warning(f"Column {col} not specified as categorical but contains non-numeric data")
+                    processed_data[col] = processed_data[col].astype(str)
+                    if col not in self.categorical_columns:
+                        self.categorical_columns.append(col)
+
+            self.logger.info(f"Processed columns. Categorical: {self.categorical_columns}")
+            
+            # Train CTGAN
             synthesizer = CTGAN(epochs=epochs)
-            synthesizer.fit(data, discrete_columns=self.categorical_columns)
+            synthesizer.fit(processed_data, discrete_columns=self.categorical_columns)
             synthetic_data = synthesizer.sample(num_samples)
+            
             self.logger.info(f"Generated {num_samples} synthetic samples")
             return synthetic_data
+            
         except Exception as e:
             self.logger.error(f"Error generating synthetic data: {str(e)}")
             raise
