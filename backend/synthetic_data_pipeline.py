@@ -127,30 +127,29 @@ class SyntheticDataPipeline:
         """Validate synthetic data against real data for specified categorical columns."""
         self.logger.info("Validating synthetic data")
         
-        # Ensure all categorical columns exist in both dataframes
-        missing_cols_real = set(self.categorical_columns) - set(real_data.columns)
-        missing_cols_synth = set(self.categorical_columns) - set(synthetic_data.columns)
+        # Validate column existence
+        missing_cols = []
+        for col in self.categorical_columns:
+            if col not in real_data.columns:
+                missing_cols.append(f"'{col}' missing in real data")
+            if col not in synthetic_data.columns:
+                missing_cols.append(f"'{col}' missing in synthetic data")
         
-        if missing_cols_real or missing_cols_synth:
-            self.logger.error(f"Missing columns in real data: {missing_cols_real}")
-            self.logger.error(f"Missing columns in synthetic data: {missing_cols_synth}")
-            raise ValueError("Not all categorical columns present in both datasets")
-        
-        # Filter both dataframes to only include existing categorical columns
-        valid_categorical_columns = [
-            col for col in self.categorical_columns 
-            if col in real_data.columns and col in synthetic_data.columns
-        ]
-        
+        if missing_cols:
+            error_msg = "Missing columns: " + ", ".join(missing_cols)
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
+
+        # Only validate columns that exist in both datasets
         metrics = {
-            "real_shape": real_data[valid_categorical_columns].shape,
-            "synthetic_shape": synthetic_data[valid_categorical_columns].shape,
-            "column_match": sorted(valid_categorical_columns) == sorted(self.categorical_columns),
+            "real_shape": (len(real_data), len(self.categorical_columns)),
+            "synthetic_shape": (len(synthetic_data), len(self.categorical_columns)),
+            "column_match": True,  # We validated this above
             "basic_stats": {}
         }
         
-        # Only validate categorical columns that exist in both datasets
-        for col in valid_categorical_columns:
+        # Calculate statistics for each categorical column
+        for col in self.categorical_columns:
             metrics["basic_stats"][col] = {
                 "unique_values_real": real_data[col].nunique(),
                 "unique_values_synthetic": synthetic_data[col].nunique()

@@ -5,3 +5,4 @@ pandas
 scikit-learn
 werkzeug
 sdv
+gunicorn==21.2.0

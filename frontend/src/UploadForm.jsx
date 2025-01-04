@@ -79,13 +79,15 @@ const UploadForm = () => {
     formData.append('num_samples', numSamples);
 
     try {
-      const response = await axios.post('https://synthetic-data-generatorbackend.vercel.app/api/generate', formData, {
+      const response = await axios.post('/generate', formData, {
         responseType: 'blob',
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Access-Control-Allow-Origin': '*'
         },
-        withCredentials: false
+        onUploadProgress: (progressEvent) => {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(progress);
+        },
       });
 
       // Check if the response is an error message
