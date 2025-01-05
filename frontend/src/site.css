@@ -10,6 +10,11 @@
 body {
   @apply bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900 min-h-screen;
   background-attachment: fixed;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 0, 150, 0.3), transparent 25%),
+              radial-gradient(circle at 80% 80%, rgba(0, 204, 255, 0.3), transparent 25%),
+              radial-gradient(circle at 50% 50%, rgba(255, 255, 0, 0.3), transparent 25%),
+              radial-gradient(circle at 30% 70%, rgba(0, 255, 204, 0.3), transparent 25%),
+              radial-gradient(circle at 70% 30%, rgba(204, 0, 255, 0.3), transparent 25%);
 }
 
 .glass-container {
@@ -17,6 +22,7 @@ body {
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   border: 1px solid var(--glass-border);
+  @apply rounded-2xl shadow-2xl;
 }
 
 /* File input reset and styling */
@@ -72,6 +78,24 @@ input:focus {
   0% { transform: scale(1); }
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px theme('colors.violet.500'); }
+  50% { box-shadow: 0 0 10px theme('colors.violet.500'); }
+}
+
+.glow-effect {
+  box-shadow: 0 0 10px theme('colors.violet.500');
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.float-animation {
+  animation: float 3s ease-in-out infinite;
 }
 
 .animate-fade-in {

@@ -1,35 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { motion } from "framer-motion";
+import GlassmorphismButton from "./components/GlassmorphismButton";
 
 const API_URL = process.env.REACT_APP_API_URL;
 
 const UploadForm = () => {
   const [file, setFile] = useState(null);
-  const [categoricalColumns, setCategoricalColumns] = useState('');
+  const [categoricalColumns, setCategoricalColumns] = useState("");
   const [numSamples, setNumSamples] = useState(1000);
-  const [downloadLink, setDownloadLink] = useState('');
+  const [downloadLink, setDownloadLink] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [validationError, setValidationError] = useState('');
+  const [validationError, setValidationError] = useState("");
   const [availableColumns, setAvailableColumns] = useState([]);
   const [selectedColumns, setSelectedColumns] = useState([]);
-  const [serverStatus, setServerStatus] = useState('checking');
+  const [serverStatus, setServerStatus] = useState("checking");
 
   useEffect(() => {
     const checkServerHealth = async () => {
       try {
         const response = await axios.get(`${API_URL}/health`);
-        if (response.data.status === 'healthy') {
-          setServerStatus('online');
-          setError('');
+        if (response.data.status === "healthy") {
+          setServerStatus("online");
+          setError("");
         } else {
-          setServerStatus('offline');
-          setError('Server is not responding properly');
+          setServerStatus("offline");
+          setError("Server is not responding properly");
         }
       } catch (err) {
-        setServerStatus('offline');
-        setError('Cannot connect to server');
+        setServerStatus("offline");
+        setError("Cannot connect to server");
       }
     };
 
@@ -39,44 +41,44 @@ const UploadForm = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setFile(file);
-    
+
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const csvContent = event.target.result;
-        const firstLine = csvContent.split('\n')[0];
-        const headers = firstLine.split(',').map(header => header.trim());
+        const firstLine = csvContent.split("\n")[0];
+        const headers = firstLine.split(",").map((header) => header.trim());
         setAvailableColumns(headers);
-        setSelectedColumns([]); // Reset selections when new file is uploaded
-        setCategoricalColumns(''); // Reset text input
+        setSelectedColumns([]);
+        setCategoricalColumns("");
       };
       reader.readAsText(file);
     }
   };
 
   const handleColumnSelect = (column) => {
-    setSelectedColumns(prev => {
+    setSelectedColumns((prev) => {
       const newSelection = prev.includes(column)
-        ? prev.filter(col => col !== column)
+        ? prev.filter((col) => col !== column)
         : [...prev, column];
-      setCategoricalColumns(newSelection.join(','));
+      setCategoricalColumns(newSelection.join(","));
       return newSelection;
     });
   };
 
   const validateForm = () => {
     if (!file) {
-      setError('Please select a CSV file');
+      setError("Please select a CSV file");
       return false;
     }
-    
+
     if (!categoricalColumns.trim()) {
-      setError('Please specify at least one categorical column');
+      setError("Please specify at least one categorical column");
       return false;
     }
 
     if (numSamples < 1) {
-      setError('Number of samples must be greater than 0');
+      setError("Number of samples must be greater than 0");
       return false;
     }
 
@@ -85,14 +87,14 @@ const UploadForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (serverStatus !== 'online') {
-      setError('Server is not available');
+    if (serverStatus !== "online") {
+      setError("Server is not available");
       return;
     }
     setLoading(true);
-    setError('');
-    setValidationError('');
-    setDownloadLink('');
+    setError("");
+    setValidationError("");
+    setDownloadLink("");
     setUploadProgress(0);
 
     if (!validateForm()) {
@@ -101,53 +103,53 @@ const UploadForm = () => {
     }
 
     const formData = new FormData();
-    formData.append('file', file);
-    formData.append('categorical_columns', categoricalColumns.trim());
-    formData.append('num_samples', numSamples);
+    formData.append("file", file);
+    formData.append("categorical_columns", categoricalColumns.trim());
+    formData.append("num_samples", numSamples);
 
     try {
       const response = await axios.post(`${API_URL}/generate`, formData, {
-        responseType: 'blob',
+        responseType: "blob",
         headers: {
-          'Content-Type': 'multipart/form-data',
+          "Content-Type": "multipart/form-data",
         },
         onUploadProgress: (progressEvent) => {
-          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          const progress = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
           setUploadProgress(progress);
         },
       });
 
-      // Check if the response is an error message
-      const contentType = response.headers['content-type'];
-      if (contentType && contentType.includes('application/json')) {
-        // Parse error message
+      const contentType = response.headers["content-type"];
+      if (contentType && contentType.includes("application/json")) {
         const reader = new FileReader();
         reader.onload = () => {
           const errorData = JSON.parse(reader.result);
-          setError(errorData.error || 'Unknown error occurred');
+          setError(errorData.error || "Unknown error occurred");
         };
         reader.readAsText(response.data);
       } else {
-        // Handle successful response
         const url = window.URL.createObjectURL(new Blob([response.data]));
         setDownloadLink(url);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
       if (error.response?.data instanceof Blob) {
-        // Try to read error message from blob
         const reader = new FileReader();
         reader.onload = () => {
           try {
             const errorData = JSON.parse(reader.result);
-            setError(errorData.error || 'Error generating synthetic data');
+            setError(errorData.error || "Error generating synthetic data");
           } catch (e) {
-            setError('Error generating synthetic data');
+            setError("Error generating synthetic data");
           }
         };
         reader.readAsText(error.response.data);
       } else {
-        setError(error.response?.data?.error || 'Error generating synthetic data');
+        setError(
+          error.response?.data?.error || "Error generating synthetic data"
+        );
       }
     } finally {
       setLoading(false);
@@ -156,67 +158,113 @@ const UploadForm = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
-      {/* Server Status Indicator */}
-      <div className="fixed top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full bg-gray-800/50 backdrop-blur-sm">
-        <div className={`w-2 h-2 rounded-full ${
-          serverStatus === 'online' ? 'bg-green-500' :
-          serverStatus === 'offline' ? 'bg-red-500' :
-          'bg-yellow-500 animate-pulse'
-        }`} />
-        <span className="text-sm text-white">
-          Server: {serverStatus.charAt(0).toUpperCase() + serverStatus.slice(1)}
-        </span>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[#0D0B1A] relative">
+      <div className="absolute top-4 right-4">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="glass-container px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 bg-gray-800/30 backdrop-blur-sm border border-gray-700/50"
+        >
+          <div
+            className={`w-2 h-2 rounded-full ${
+              serverStatus === "online"
+                ? "bg-green-500"
+                : serverStatus === "offline"
+                ? "bg-red-500"
+                : "bg-yellow-500 animate-pulse"
+            }`}
+          />
+          <span className="text-sm text-white font-medium">
+            Server:{" "}
+            {serverStatus.charAt(0).toUpperCase() + serverStatus.slice(1)}
+          </span>
+        </motion.div>
       </div>
-      <form onSubmit={handleSubmit} className="glass-container rounded-2xl shadow-2xl w-full max-w-4xl p-8 animate-fade-in">
-        <h1 className="text-4xl font-bold mb-8 text-white text-center animate-slide-in">
+      <motion.form
+        onSubmit={handleSubmit}
+        className="glass-container w-full max-w-4xl p-8"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <motion.h1
+          className="text-4xl font-bold mb-8 text-white text-center gradient-text"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+        >
           Generate Synthetic Data
-        </h1>
-        
-        <div className="grid md:grid-cols-2 gap-6">
-        {/* File Upload Section */}
-        <div className="md:col-span-2 animate-slide-in" style={{ animationDelay: '0.1s' }}>
-            <label className="block text-white mb-2 font-semibold" style={{ fontSize: '23px' }}>Upload CSV File</label>
-            <div className="file-input-wrapper">
-                <input 
-                    type="file" 
-                    onChange={handleFileChange}
-                    accept=".csv"
-                    className="file-input"
-                />
-                <div className="file-input-button">
-                    <div className="icon">
-                        {file ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                            </svg>
-                        )}
-                    </div>
-                    <div className="text">
-                        {file ? (
-                            <span>Selected: {file.name}</span>
-                        ) : (
-                            <span>
-                                <span className="font-semibold">Click to upload</span> or drag and drop<br />
-                                <span className="text-sm text-gray-400">CSV files only</span>
-                            </span>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
+        </motion.h1>
 
-        {/* Column Selection Section */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <motion.div
+            className="md:col-span-2"
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
+            <label className="block text-white mb-2 font-semibold text-2xl">
+              Upload CSV File
+            </label>
+            <div className="relative flex items-center justify-center w-full">
+              <input
+                type="file"
+                onChange={handleFileChange}
+                accept=".csv"
+                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+              />
+              <div className="w-full bg-gray-800/50 border-2 border-dashed border-gray-600 rounded-lg p-6 text-center cursor-pointer transition-all duration-300 hover:border-violet-500 hover:bg-gray-700/50">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-12 w-12 mx-auto text-violet-500 mb-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+                <span className="text-gray-300">
+                  {file ? (
+                    <span>Selected: {file.name}</span>
+                  ) : (
+                    <span>
+                      <span className="font-semibold">Click to upload</span> or
+                      drag and drop
+                      <br />
+                      <span className="text-sm text-gray-400">
+                        CSV files only
+                      </span>
+                    </span>
+                  )}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+
           {availableColumns.length > 0 && (
-            <div className="md:col-span-2 animate-slide-in" style={{ animationDelay: '0.2s' }}>
-              <label className="block text-white mb-2 font-semibold" style={{ fontSize: '23px' }}>Select Categorical Columns</label>
-              <div className="checkbox-container custom-scrollbar flex flex-wrap gap-3 max-h-48 overflow-y-auto">
-                {availableColumns.map(column => (
-                  <div key={column} className="flex items-center space-x-2 p-2 hover:bg-gray-700/30 rounded-lg transition-colors">
+            <motion.div
+              className="md:col-span-2"
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+            >
+              <label className="block text-white mb-2 font-semibold text-2xl">
+                Select Categorical Columns
+              </label>
+              <div className="glass-container custom-scrollbar flex flex-wrap gap-3 max-h-48 overflow-y-auto p-4">
+                {availableColumns.map((column) => (
+                  <motion.div
+                    key={column}
+                    className="flex items-center space-x-2"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
                     <input
                       type="checkbox"
                       id={column}
@@ -224,98 +272,141 @@ const UploadForm = () => {
                       onChange={() => handleColumnSelect(column)}
                       className="hidden"
                     />
-                    <label 
-                      htmlFor={column} 
+                    <label
+                      htmlFor={column}
                       className={`cursor-pointer text-sm text-white py-2 px-4 rounded-lg transition-all duration-300 ${
-                        selectedColumns.includes(column) ? 'bg-violet-600' : 'bg-gray-700'
-                      } hover:bg-violet-500`}
+                        selectedColumns.includes(column)
+                          ? "bg-violet-600 glow-effect"
+                          : "bg-gray-700 hover:bg-violet-500"
+                      }`}
                     >
                       {column}
                     </label>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
-          {/* Number of Samples */}
-          <div className="md:col-span-2 animate-slide-in" style={{ animationDelay: '0.3s' }}>
-            <label className="block text-white mb-2 font-semibold" style={{ fontSize: '23px' }}>Number of Samples</label>
+          <motion.div
+            className="md:col-span-2"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+          >
+            <label className="block text-white mb-2 font-semibold text-2xl">
+              Number of Samples
+            </label>
             <input
               type="number"
               value={numSamples}
-              onChange={(e) => setNumSamples(e.target.value)}
+              onChange={(e) => setNumSamples(parseInt(e.target.value))}
               min="1"
-              className="w-full"
+              className="w-full bg-gray-800/50 text-white border border-gray-700/50 rounded-lg p-3 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/50 transition-all duration-300"
             />
-          </div>
+          </motion.div>
         </div>
 
-        {/* Progress Bar */}
         {uploadProgress > 0 && uploadProgress < 100 && (
-          <div className="mt-6 animate-fade-in">
+          <motion.div
+            className="mt-6"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.5 }}
+          >
             <div className="w-full bg-gray-700/30 rounded-full h-2">
-              <div 
+              <div
                 className="bg-violet-600 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <p className="text-sm text-center mt-2 text-white">Uploading: {uploadProgress}%</p>
-          </div>
+            <p className="text-sm text-center mt-2 text-white">
+              Uploading: {uploadProgress}%
+            </p>
+          </motion.div>
         )}
 
-        {/* Error Message */}
         {error && (
-          <div className="mt-6 p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-center animate-fade-in">
+          <motion.div
+            className="mt-6 p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
             {error}
-          </div>
+          </motion.div>
         )}
 
-        {/* Validation Error Message */}
         {validationError && (
-          <div className="text-red-500 text-sm mt-2">
-            {validationError}
-          </div>
+          <div className="text-red-500 text-sm mt-2">{validationError}</div>
         )}
 
-        {/* Submit Button */}
-        <button 
-          type="submit" 
+        <GlassmorphismButton
+          type="submit"
           disabled={loading}
-          className="mt-8 w-full bg-violet-600 hover:bg-violet-500 text-white py-4 px-6 rounded-xl
-                   font-bold transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50
-                   disabled:hover:scale-100 animate-slide-in shadow-lg"
-          style={{ animationDelay: '0.4s' }}
+          className="mt-8 w-full"
         >
           {loading ? (
             <span className="flex items-center justify-center">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
               Generating Data...
             </span>
-          ) : 'Generate'}
-        </button>
+          ) : (
+            "Generate"
+          )}
+        </GlassmorphismButton>
 
-        {/* Download Link */}
         {downloadLink && (
-          <div className="mt-6 text-center animate-fade-in">
-            <a 
-              href={downloadLink} 
-              download="synthetic_data.csv" 
+          <motion.div
+            className="mt-6 text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <a
+              href={downloadLink}
+              download="synthetic_data.csv"
               className="inline-flex items-center px-6 py-3 bg-green-600/90 hover:bg-green-500/90 
-                       text-white rounded-xl transition-all duration-300 transform hover:scale-[1.02]
-                       backdrop-blur-sm animate-pulse-slow"
+                         text-white rounded-xl transition-all duration-300 transform hover:scale-[1.02]
+                         backdrop-blur-sm"
             >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              <svg
+                className="w-5 h-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
               </svg>
               Download Synthetic Data
             </a>
-          </div>
+          </motion.div>
         )}
-      </form>
+      </motion.form>
     </div>
   );
 };
