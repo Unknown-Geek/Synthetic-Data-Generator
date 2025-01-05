@@ -14,7 +14,6 @@ const UploadForm = () => {
   const [validationError, setValidationError] = useState('');
   const [availableColumns, setAvailableColumns] = useState([]);
   const [selectedColumns, setSelectedColumns] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [serverStatus, setServerStatus] = useState('checking');
 
   useEffect(() => {
