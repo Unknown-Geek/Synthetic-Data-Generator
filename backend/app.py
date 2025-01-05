@@ -16,13 +16,7 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 # Setup CORS with Render domains
-CORS(app, origins=[
-    "http://localhost:3000",
-    "http://localhost:5000",
-    "http://localhost:8080",
-    "https://synthetic-data-generator.vercel.app",
-    "synthetic-data-generator-neon.vercel.app"
-], supports_credentials=True)
+CORS(app, origins="*", supports_credentials=True)
 
 app.config['UPLOAD_FOLDER'] = 'temp_uploads'
 app.config['OUTPUT_FOLDER'] = 'output'
