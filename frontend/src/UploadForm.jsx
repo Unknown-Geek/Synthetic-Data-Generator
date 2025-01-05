@@ -1,6 +1,7 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { ApiContext } from './ApiContext';
+
+const API_URL = process.env.REACT_APP_API_URL;
 
 const UploadForm = () => {
   const [file, setFile] = useState(null);
@@ -13,8 +14,28 @@ const UploadForm = () => {
   const [validationError, setValidationError] = useState('');
   const [availableColumns, setAvailableColumns] = useState([]);
   const [selectedColumns, setSelectedColumns] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [serverStatus, setServerStatus] = useState('checking');
 
-  const { apiUrl, isLoading } = useContext(ApiContext);
+  useEffect(() => {
+    const checkServerHealth = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/health`);
+        if (response.data.status === 'healthy') {
+          setServerStatus('online');
+          setError('');
+        } else {
+          setServerStatus('offline');
+          setError('Server is not responding properly');
+        }
+      } catch (err) {
+        setServerStatus('offline');
+        setError('Cannot connect to server');
+      }
+    };
+
+    checkServerHealth();
+  }, []);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -65,16 +86,15 @@ const UploadForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (serverStatus !== 'online') {
+      setError('Server is not available');
+      return;
+    }
     setLoading(true);
     setError('');
     setValidationError('');
     setDownloadLink('');
     setUploadProgress(0);
-
-    if (isLoading) {
-      setError('Waiting for server connection...');
-      return;
-    }
 
     if (!validateForm()) {
       setLoading(false);
@@ -87,7 +107,7 @@ const UploadForm = () => {
     formData.append('num_samples', numSamples);
 
     try {
-      const response = await axios.post(`${apiUrl}/generate`, formData, {
+      const response = await axios.post(`${API_URL}/generate`, formData, {
         responseType: 'blob',
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -138,6 +158,17 @@ const UploadForm = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-purple-900 to-violet-900">
+      {/* Server Status Indicator */}
+      <div className="fixed top-4 right-4 flex items-center gap-2 px-4 py-2 rounded-full bg-gray-800/50 backdrop-blur-sm">
+        <div className={`w-2 h-2 rounded-full ${
+          serverStatus === 'online' ? 'bg-green-500' :
+          serverStatus === 'offline' ? 'bg-red-500' :
+          'bg-yellow-500 animate-pulse'
+        }`} />
+        <span className="text-sm text-white">
+          Server: {serverStatus.charAt(0).toUpperCase() + serverStatus.slice(1)}
+        </span>
+      </div>
       <form onSubmit={handleSubmit} className="glass-container rounded-2xl shadow-2xl w-full max-w-4xl p-8 animate-fade-in">
         <h1 className="text-4xl font-bold mb-8 text-white text-center animate-slide-in">
           Generate Synthetic Data

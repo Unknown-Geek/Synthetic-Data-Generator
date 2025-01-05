@@ -20,9 +20,8 @@ CORS(app, origins=[
     "http://localhost:3000",
     "http://localhost:5000",
     "http://localhost:8080",
-    "https://synthetic-data-generator-frontend.onrender.com",
-    "https://synthetic-data-generator.onrender.com",
-    "https://synthetic-data-generator.vercel.app"
+    "https://synthetic-data-generator.vercel.app",
+    "synthetic-data-generator-neon.vercel.app"
 ], supports_credentials=True)
 
 app.config['UPLOAD_FOLDER'] = 'temp_uploads'
