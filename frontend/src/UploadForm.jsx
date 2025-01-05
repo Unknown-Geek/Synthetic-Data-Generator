@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import axios from 'axios';
-import { API_URL } from './index';
+import { ApiContext } from './ApiContext';
 
 const UploadForm = () => {
   const [file, setFile] = useState(null);
@@ -13,6 +13,8 @@ const UploadForm = () => {
   const [validationError, setValidationError] = useState('');
   const [availableColumns, setAvailableColumns] = useState([]);
   const [selectedColumns, setSelectedColumns] = useState([]);
+
+  const { apiUrl, isLoading } = useContext(ApiContext);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -69,6 +71,11 @@ const UploadForm = () => {
     setDownloadLink('');
     setUploadProgress(0);
 
+    if (isLoading) {
+      setError('Waiting for server connection...');
+      return;
+    }
+
     if (!validateForm()) {
       setLoading(false);
       return;
@@ -80,7 +87,7 @@ const UploadForm = () => {
     formData.append('num_samples', numSamples);
 
     try {
-      const response = await axios.post(`${API_URL}/generate`, formData, {
+      const response = await axios.post(`${apiUrl}/generate`, formData, {
         responseType: 'blob',
         headers: {
           'Content-Type': 'multipart/form-data',

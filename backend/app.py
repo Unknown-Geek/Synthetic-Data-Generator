@@ -18,11 +18,13 @@ app = Flask(__name__)
 # Setup CORS with Render domains
 CORS(app, origins=[
     "http://localhost:3000",
+    "http://localhost:5000",
     "http://localhost:8080",
     "https://synthetic-data-generator-frontend.onrender.com",
     "https://synthetic-data-generator.onrender.com",
     "https://synthetic-data-generator.vercel.app"
 ], supports_credentials=True)
+
 app.config['UPLOAD_FOLDER'] = 'temp_uploads'
 app.config['OUTPUT_FOLDER'] = 'output'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size

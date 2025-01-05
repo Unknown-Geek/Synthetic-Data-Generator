@@ -1,4 +1,3 @@
-# synthetic_data_pipeline.py
 import pandas as pd
 import numpy as np
 from ctgan.synthesizers.ctgan import CTGAN
@@ -90,113 +89,86 @@ class SyntheticDataPipeline:
         except (ValueError, TypeError):
             return False
 
-    def generate_synthetic_data(
-        self,
-        data: pd.DataFrame,
-        num_samples: int = 1000,
-        epochs: int = 50,  # Reduced epochs
-        chunk_size: int = 1000  # Smaller chunks
-    ) -> pd.DataFrame:
+    def preprocess_data(self, data: pd.DataFrame) -> pd.DataFrame:
+        """Preprocess data by properly handling types and missing values"""
+        processed_data = data.copy()
+        
+        # Only process and return user-selected categorical columns
+        selected_data = processed_data[self.categorical_columns].copy()
+        
+        # Handle categorical columns
+        for col in self.categorical_columns:
+            # Convert to string and handle missing values
+            selected_data[col] = selected_data[col].fillna('MISSING')
+            selected_data[col] = selected_data[col].astype(str)
+        
+        self.logger.info(f"Preprocessed {len(self.categorical_columns)} categorical columns")
+        return selected_data
+
+    def generate_synthetic_data(self, data: pd.DataFrame, num_samples: int = 1000, epochs: int = 100, chunk_size: int = 1000) -> pd.DataFrame:
+        """Generate synthetic data using CTGAN"""
         self.logger.info("Starting synthetic data generation")
         try:
-            processed_data = data.copy()
+            # Only process selected categorical columns
+            processed_data = self.preprocess_data(data)
             
-            # Reduce memory usage by converting to smaller dtypes
-            for col in processed_data.columns:
-                if processed_data[col].dtype == 'int64':
-                    processed_data[col] = processed_data[col].astype('int32')
-                elif processed_data[col].dtype == 'float64':
-                    processed_data[col] = processed_data[col].astype('float32')
-                elif processed_data[col].dtype == 'object':
-                    processed_data[col] = processed_data[col].astype('category')
+            # Initialize CTGAN with conservative parameters
+            synthesizer = CTGAN(
+                epochs=epochs,
+                batch_size=500,
+                generator_dim=(128, 128),
+                discriminator_dim=(128, 128),
+                embedding_dim=128,
+                verbose=True
+            )
 
-            # Process in smaller batches
-            synthetic_pieces = []
-            samples_per_chunk = max(1, num_samples // (len(processed_data) // chunk_size))
-            
-            for start in range(0, len(processed_data), chunk_size):
-                end = min(start + chunk_size, len(processed_data))
-                chunk = processed_data[start:end]
-                
-                # Use a more memory-efficient configuration for CTGAN
-                synthesizer = CTGAN(
-                    epochs=epochs,
-                    batch_size=min(100, len(chunk)),
-                    generator_dim=(64, 64),  # Smaller network
-                    discriminator_dim=(64, 64)  # Smaller network
-                )
-                
-                synthesizer.fit(chunk, discrete_columns=self.categorical_columns)
-                synthetic_chunk = synthesizer.sample(samples_per_chunk)
-                synthetic_pieces.append(synthetic_chunk)
-                
-                # Clear memory
-                del synthesizer
-                import gc
-                gc.collect()
-                
-                self.logger.info(f"Processed chunk {start} to {end}")
+            # Fit the model with all columns as discrete
+            self.logger.info("Training CTGAN model...")
+            synthesizer.fit(processed_data, discrete_columns=self.categorical_columns)
 
-            # Combine all pieces
-            synthetic_data = pd.concat(synthetic_pieces, ignore_index=True)
-            if len(synthetic_data) > num_samples:
-                synthetic_data = synthetic_data.sample(n=num_samples)
-            
+            # Generate synthetic data
+            self.logger.info(f"Generating {num_samples} synthetic samples...")
+            synthetic_data = synthesizer.sample(num_samples)
+
+            # Post-process to ensure string type and handle missing values
+            for col in self.categorical_columns:
+                synthetic_data[col] = synthetic_data[col].astype(str)
+                synthetic_data[col] = synthetic_data[col].replace('MISSING', np.nan)
+
             self.logger.info(f"Generated {len(synthetic_data)} synthetic samples")
             return synthetic_data
-            
+
         except Exception as e:
-            self.logger.error(f"Error generating synthetic data: {str(e)}")
+            self.logger.error(f"Error in generate_synthetic_data: {str(e)}")
             raise
 
-    def validate_synthetic_data(
-        self,
-        real_data: pd.DataFrame,
-        synthetic_data: pd.DataFrame
-    ) -> Dict:
+    def validate_synthetic_data(self, real_data: pd.DataFrame, synthetic_data: pd.DataFrame) -> Dict:
         """Validate synthetic data against real data for specified categorical columns."""
         self.logger.info("Validating synthetic data")
         
-        # Validate column existence
-        missing_cols = []
-        for col in self.categorical_columns:
-            if col not in real_data.columns:
-                missing_cols.append(f"'{col}' missing in real data")
-            if col not in synthetic_data.columns:
-                missing_cols.append(f"'{col}' missing in synthetic data")
-        
-        if missing_cols:
-            error_msg = "Missing columns: " + ", ".join(missing_cols)
-            self.logger.error(error_msg)
-            raise ValueError(error_msg)
-
-        # Only validate columns that exist in both datasets
         metrics = {
-            "real_shape": (len(real_data), len(self.categorical_columns)),
-            "synthetic_shape": (len(synthetic_data), len(self.categorical_columns)),
-            "column_match": True,  # We validated this above
+            "real_shape": real_data.shape,
+            "synthetic_shape": synthetic_data.shape,
+            "column_match": all(col in synthetic_data.columns for col in real_data.columns),
             "basic_stats": {}
         }
         
-        # Calculate statistics for each categorical column
         for col in self.categorical_columns:
-            metrics["basic_stats"][col] = {
-                "unique_values_real": real_data[col].nunique(),
-                "unique_values_synthetic": synthetic_data[col].nunique()
-            }
-            
+            if col in real_data.columns and col in synthetic_data.columns:
+                metrics["basic_stats"][col] = {
+                    "unique_values_real": real_data[col].nunique(),
+                    "unique_values_synthetic": synthetic_data[col].nunique()
+                }
+        
         return metrics
 
-    def save_outputs(
-        self,
-        synthetic_data: pd.DataFrame,
-        validation_metrics: Dict
-    ) -> None:
+    def save_outputs(self, synthetic_data: pd.DataFrame, validation_metrics: Dict) -> None:
         """Save synthetic data and metadata."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
-        # Filter only categorical columns for output
+        # Filter only the user-selected categorical columns
         output_data = synthetic_data[self.categorical_columns].copy()
+        self.logger.info(f"Saving {len(self.categorical_columns)} categorical columns: {', '.join(self.categorical_columns)}")
         
         # Save filtered data
         output_file = os.path.join(self.output_dir, f"synthetic_data_{timestamp}.csv")
@@ -218,17 +190,11 @@ class SyntheticDataPipeline:
         self.logger.info(f"Saved synthetic data to {output_file}")
         self.logger.info(f"Saved metadata to {metadata_file}")
 
-    def run_pipeline(self, num_samples: int = 1000, chunk_size: int = 10000, **kwargs) -> None:
-        """
-        Run the synthetic data generation pipeline.
-        
-        Args:
-            num_samples: Number of synthetic samples to generate
-            **kwargs: Additional arguments passed to generate_synthetic_data
-        """
+    def run_pipeline(self, num_samples: int = 1000, chunk_size: int = 10000, epochs: int = 100, **kwargs) -> None:
+        """Run the synthetic data generation pipeline."""
         try:
             real_data = self.load_data()
-            synthetic_data = self.generate_synthetic_data(real_data, num_samples=num_samples, chunk_size=chunk_size, **kwargs)
+            synthetic_data = self.generate_synthetic_data(real_data, num_samples=num_samples, epochs=epochs, chunk_size=chunk_size, **kwargs)
             validation_metrics = self.validate_synthetic_data(real_data, synthetic_data)
             self.save_outputs(synthetic_data, validation_metrics)
             self.logger.info("Pipeline completed successfully")
