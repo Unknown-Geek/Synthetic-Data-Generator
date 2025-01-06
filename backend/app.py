@@ -16,7 +16,10 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 # Setup CORS with Render domains
-CORS(app, origins="*", supports_credentials=True)
+CORS(app, origins=["*"], 
+     supports_credentials=True,
+     methods=["GET", "POST"],
+     allow_headers=["Content-Type"])
 
 app.config['UPLOAD_FOLDER'] = 'temp_uploads'
 app.config['OUTPUT_FOLDER'] = 'output'
@@ -48,7 +51,11 @@ def cleanup_output_directory(directory):
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({"status": "healthy"}), 200
+    try:
+        return jsonify({"status": "healthy"}), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({"status": "unhealthy", "error": str(e)}), 500
 
 @app.route('/generate', methods=['POST'])
 def generate_synthetic_data():

@@ -190,6 +190,27 @@ class SyntheticDataPipeline:
         self.logger.info(f"Saved synthetic data to {output_file}")
         self.logger.info(f"Saved metadata to {metadata_file}")
 
+    def create_metadata_file(self, synthetic_data: pd.DataFrame, timestamp: str) -> None:
+        """Create a metadata.json file with dataset details."""
+        metadata = {
+            "name": "Synthetic Healthcare Dataset",
+            "description": "A privacy-preserving synthetic dataset for healthcare analysis.",
+            "columns": [
+                {"name": col, "type": "categorical"} for col in self.categorical_columns
+            ],
+            "size": f"{len(synthetic_data)} rows"
+        }
+        metadata_file = os.path.join(self.output_dir, f"metadata_{timestamp}.json")
+        with open(metadata_file, 'w') as f:
+            json.dump(metadata, f, indent=2)
+        self.logger.info(f"Saved metadata to {metadata_file}")
+
+    def compress_files(self, timestamp: str) -> None:
+        """Compress the dataset and documentation into a zip file."""
+        zip_filename = os.path.join(self.output_dir, f"dataset_package_{timestamp}.zip")
+        shutil.make_archive(zip_filename.replace('.zip', ''), 'zip', self.output_dir)
+        self.logger.info(f"Compressed files into {zip_filename}")
+
     def run_pipeline(self, num_samples: int = 1000, chunk_size: int = 10000, epochs: int = 100, **kwargs) -> None:
         """Run the synthetic data generation pipeline."""
         try:
@@ -197,6 +218,9 @@ class SyntheticDataPipeline:
             synthetic_data = self.generate_synthetic_data(real_data, num_samples=num_samples, epochs=epochs, chunk_size=chunk_size, **kwargs)
             validation_metrics = self.validate_synthetic_data(real_data, synthetic_data)
             self.save_outputs(synthetic_data, validation_metrics)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.create_metadata_file(synthetic_data, timestamp)
+            self.compress_files(timestamp)
             self.logger.info("Pipeline completed successfully")
         except Exception as e:
             self.logger.error(f"Pipeline failed: {str(e)}")

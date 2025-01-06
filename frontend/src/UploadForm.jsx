@@ -30,11 +30,11 @@ const UploadForm = () => {
           setError("Server is not responding properly");
         }
       } catch (err) {
-        setServerStatus("offline");
+        setServerStatus("offline"); 
         setError("Cannot connect to server");
       }
     };
-
+  
     checkServerHealth();
   }, []);
 

@@ -2,4 +2,4 @@ language: python
 runtime:
   name: python
   version: 3.9
-startupCommand: "gunicorn --bind=0.0.0.0 --timeout 600 app:app"
+startupCommand: "gunicorn --bind=0.0.0.0 --workers 4 --timeout 600 app:app"

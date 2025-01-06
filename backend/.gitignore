@@ -7,3 +7,5 @@ temp_uploads/*
 !temp_uploads/.gitkeep
 output/*
 !output/.gitkeep
+output
+temp_uploads
