@@ -58,6 +58,20 @@ cd frontend
 npm install
 ```
 
+### Alternatively (For Windows)
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd synthetic-data-generator
+```
+
+2. Run the executable "run.bat" to directly run the application:
+```bash
+.\run.bat
+```
+
+
 ## Configuration
 
 1. Create a `.env` file in the frontend directory:
