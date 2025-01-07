@@ -40,11 +40,11 @@ def generate_synthetic_data(file, categorical_columns, num_samples):
 iface = gr.Interface(
     fn=generate_synthetic_data,
     inputs=[
-        gr.inputs.File(label="Upload CSV File"),
-        gr.inputs.Textbox(label="Categorical Columns (comma-separated)"),
-        gr.inputs.Number(label="Number of Samples", default=1000)
+        gr.components.File(label="Upload CSV File"),
+        gr.components.Textbox(label="Categorical Columns (comma-separated)"),
+        gr.components.Number(label="Number of Samples", value=1000)
     ],
-    outputs=gr.outputs.Dataframe(label="Synthetic Data"),
+    outputs=gr.components.Dataframe(label="Synthetic Data"),
     title="Synthetic Data Generator",
     description="Upload a CSV file, specify categorical columns, and generate synthetic data."
 )
