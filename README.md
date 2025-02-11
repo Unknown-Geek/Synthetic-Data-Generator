@@ -127,22 +127,10 @@ The frontend will run on `http://localhost:3000`
 
 - `GET /health` - Check server status
 - `POST /generate` - Generate synthetic data
-  - Request: Multipart form data with:
-    - 
-
-file
-
-: CSV file
-    - 
-
-categorical_columns
-
-: Comma-separated column names
-    - 
-
-num_samples
-
-: Number of samples to generate
+- Request: Multipart form data with:
+    - file : CSV file
+    - categorical_columns : Comma-separated column names
+    - num_samples : Number of samples to generate
 
 ## Error Handling
 
