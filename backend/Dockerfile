@@ -19,5 +19,13 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Make sure directories exist for file operations
 RUN mkdir -p temp_uploads output
 
+# Set production environment
+ENV ENVIRONMENT=production
+# Default to 2 workers per core for HF Spaces (2 vCPUs, 16GB RAM)
+ENV WORKERS_PER_CORE=2
+# Set a longer timeout for synthetic data generation
+ENV TIMEOUT=300
+
 COPY --chown=user . /app
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+# Use our new startup script instead of directly calling uvicorn
+CMD ["python", "start_server.py"]

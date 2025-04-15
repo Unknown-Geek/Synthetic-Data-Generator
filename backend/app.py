@@ -178,5 +178,17 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     logger.info(f"Starting FastAPI server on port {port}")
     
-    # Start the server
-    uvicorn.run("app:app", host="0.0.0.0", port=port, reload=True)
+    # Check if we should use the new startup script
+    if os.path.exists("start_server.py"):
+        logger.info("Using start_server.py for optimal server configuration")
+        # For legacy compatibility, default to development mode when run directly
+        os.environ["ENVIRONMENT"] = os.environ.get("ENVIRONMENT", "development")
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("start_server", "start_server.py")
+        start_server = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(start_server)
+    else:
+        # Fallback to direct uvicorn for backward compatibility
+        logger.info("Using direct uvicorn server (legacy mode)")
+        import uvicorn
+        uvicorn.run("app:app", host="0.0.0.0", port=port, reload=True)

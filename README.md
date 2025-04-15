@@ -21,6 +21,7 @@ A web application that generates synthetic data from CSV files while preserving 
 - Real-time progress tracking
 - Automatic validation of generated data
 - Metadata generation for each dataset
+- Server health monitoring with fallback mechanism
 
 ## Architecture
 
@@ -30,17 +31,19 @@ The project consists of two main components:
 
 - Built with React.js and TailwindCSS
 - Features a modern glassmorphism UI design
-- Real-time server status monitoring
+- Real-time server status monitoring with fallback capability
 - Interactive column selection
 - Progress tracking during generation
+- Responsive design with Framer Motion animations
 
 ### Backend
 
-- Flask-based REST API
+- FastAPI-based REST API (with Flask compatibility layer)
 - CTGAN implementation for synthetic data generation
 - Automatic data validation and preprocessing
 - File handling and cleanup
-- Logging and error handling
+- Comprehensive logging and error handling
+- Docker containerization for easy deployment
 
 ## Prerequisites
 
@@ -72,6 +75,7 @@ pip install -r requirements.txt
 ```bash
 cd frontend
 npm install
+npm run build:css  # Generate the Tailwind CSS output
 ```
 
 ### Alternatively (For Windows)
@@ -91,10 +95,13 @@ cd synthetic-data-generator
 
 ## Configuration
 
-1. Create a `.env` file in the frontend directory:
+1. Create or modify the `.env` file in the frontend directory:
 
 ```
-REACT_APP_API_URL=http://localhost:8080
+REACT_APP_API_URL=http://localhost:7860
+REACT_APP_PRODUCTION_API_URL=https://mojo-maniac-synthetic-data-generator-backend.hf.space
+NODE_ENV=production
+NODE_OPTIONS=--openssl-legacy-provider
 ```
 
 2. Create a `.env` file in the backend directory if needed for custom configuration.
@@ -133,16 +140,29 @@ The frontend will run on `http://localhost:3000`
 ```
 .
 ├── backend/
-│   ├── app.py                 # Flask server and API endpoints
-│   ├── synthetic_data_pipeline.py  # Core data generation logic
-│   ├── requirements.txt       # Python dependencies
-│   └── README.md             # Backend documentation
+│   ├── app.py                     # FastAPI server and main API endpoints
+│   ├── main.py                    # Flask compatibility layer
+│   ├── synthetic_data_pipeline.py # Core data generation logic
+│   ├── synthetic_data_pipeline.ipynb # Notebook for experimentation
+│   ├── requirements.txt           # Python dependencies
+│   ├── Dockerfile                 # Container configuration for deployment
+│   ├── output/                    # Generated data output directory
+│   ├── temp_uploads/              # Temporary storage for uploaded files
+│   └── README.md                  # Backend documentation
 ├── frontend/
-│   ├── src/                  # React source files
-│   ├── public/               # Static files
-│   ├── package.json          # Node.js dependencies
-│   └── .env                  # Environment configuration
-└── README.md                 # Project documentation
+│   ├── src/
+│   │   ├── components/            # Reusable UI components
+│   │   ├── utils/                 # Utility functions
+│   │   ├── ApiContext.js          # API context with fallback mechanism
+│   │   ├── UploadForm.jsx         # Main form component
+│   │   ├── index.js               # Application entry point
+│   │   ├── site.css               # Tailwind source CSS
+│   │   └── output.css             # Generated Tailwind CSS
+│   ├── public/                    # Static files
+│   ├── package.json               # Node.js dependencies
+│   └── .env                       # Environment configuration
+├── run.bat                        # Windows one-click setup and run script
+└── README.md                      # Project documentation
 ```
 
 ## API Endpoints
@@ -160,8 +180,18 @@ The application includes comprehensive error handling for:
 
 - Invalid file formats
 - Missing or invalid columns
-- Server connectivity issues
+- Server connectivity issues with automatic fallback
 - Generation process failures
+- Progress tracking and cancellation
+
+## Deployment
+
+The application is designed for easy deployment:
+
+- The backend is containerized using Docker
+- The frontend can be deployed to static hosting services
+- Configuration supports both development and production environments
+- Built-in server health checking and fallback mechanisms
 
 ## Contributing
 
