@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import GlassmorphismButton from "./components/GlassmorphismButton";
-import { checkServerHealth } from "./utils/serverStatus";
 import { ApiContext } from "./ApiContext";
 
 const UploadForm = () => {
