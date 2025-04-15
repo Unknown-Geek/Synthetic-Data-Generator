@@ -9,6 +9,7 @@ const UploadForm = () => {
     apiUrl,
     serverStatus: contextServerStatus,
     usingFallback,
+    setProcessing
   } = useContext(ApiContext);
   const [file, setFile] = useState(null);
   const [categoricalColumns, setCategoricalColumns] = useState("");
@@ -26,13 +27,14 @@ const UploadForm = () => {
     // Use the server status from context
     setServerStatus(contextServerStatus);
 
-    if (contextServerStatus !== "online") {
+    // Only show error if server is offline AND we're not currently loading/processing
+    if (contextServerStatus !== "online" && !loading) {
       setError("Server is not available");
     } else {
-      // Remove fallback error message
+      // Remove error message when server is online or when loading
       setError("");
     }
-  }, [contextServerStatus, usingFallback]);
+  }, [contextServerStatus, usingFallback, loading]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -92,9 +94,13 @@ const UploadForm = () => {
     setValidationError("");
     setDownloadLink("");
     setUploadProgress(0);
+    
+    // Tell context we're processing - prevents status changes
+    setProcessing(true);
 
     if (!validateForm()) {
       setLoading(false);
+      setProcessing(false);
       return;
     }
 
@@ -150,6 +156,8 @@ const UploadForm = () => {
     } finally {
       setLoading(false);
       setUploadProgress(0);
+      // Tell context we're done processing
+      setProcessing(false);
     }
   };
 

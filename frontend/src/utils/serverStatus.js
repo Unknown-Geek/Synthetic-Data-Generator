@@ -6,9 +6,14 @@ import axios from "axios";
  * @param {number} timeout - Timeout in milliseconds
  * @returns {Promise<Object>} - Status result object
  */
-const checkSingleServerHealth = async (url, timeout = 5000) => {
+const checkSingleServerHealth = async (url, timeout = 3000) => {
   try {
-    const response = await axios.get(`${url}/health`, { timeout });
+    // Shorter timeout to avoid hanging UI
+    const response = await axios.get(`${url}/health`, {
+      timeout,
+      // Add abort controller signal to cancel request if needed
+      signal: AbortSignal.timeout(timeout),
+    });
 
     if (response.data.status === "healthy") {
       return {

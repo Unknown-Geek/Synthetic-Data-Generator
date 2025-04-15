@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from "react";
+import React, { createContext, useState, useEffect, useCallback } from "react";
 import { checkServerHealth } from "./utils/serverStatus";
 
 export const ApiContext = createContext();
@@ -10,9 +10,21 @@ export const ApiProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [serverStatus, setServerStatus] = useState("checking");
   const [usingFallback, setUsingFallback] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Function to be called when data generation starts/ends
+  const setProcessing = useCallback((processing) => {
+    setIsProcessing(processing);
+  }, []);
 
   useEffect(() => {
     const checkServer = async () => {
+      // Skip server check when processing data to prevent false negatives
+      if (isProcessing) {
+        console.info("Skipping server status check while processing data");
+        return;
+      }
+
       try {
         const status = await checkServerHealth(primaryApiUrl, productionApiUrl);
 
@@ -41,7 +53,7 @@ export const ApiProvider = ({ children }) => {
     // Check server status periodically
     const interval = setInterval(checkServer, 30000);
     return () => clearInterval(interval);
-  }, [primaryApiUrl, productionApiUrl]);
+  }, [primaryApiUrl, productionApiUrl, isProcessing]);
 
   return (
     <ApiContext.Provider
@@ -49,9 +61,11 @@ export const ApiProvider = ({ children }) => {
         apiUrl: activeApiUrl,
         isLoading,
         serverStatus,
-        usingFallback, // Still provide this, but don't use it for visible UI elements
+        usingFallback,
         primaryApiUrl,
         productionApiUrl,
+        setProcessing,
+        isProcessing,
       }}
     >
       {children}
