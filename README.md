@@ -1,14 +1,3 @@
----
-title: Synthetic Data Generator
-emoji: 🧪
-colorFrom: blue
-colorTo: green
-sdk: gradio
-app_file: backend/app.py
-pinned: false
-license: mit
----
-
 # Synthetic Data Generator
 
 A web application that generates synthetic data from CSV files while preserving statistical properties and privacy. The application uses CTGAN (Conditional Tabular GAN) to generate realistic synthetic data from categorical columns.
