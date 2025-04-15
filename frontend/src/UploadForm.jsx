@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import GlassmorphismButton from "./components/GlassmorphismButton";
-
-const API_URL = process.env.REACT_APP_API_URL;
+import { checkServerHealth } from "./utils/serverStatus";
+import { ApiContext } from "./ApiContext";
 
 const UploadForm = () => {
+  const {
+    apiUrl,
+    serverStatus: contextServerStatus,
+    usingFallback,
+  } = useContext(ApiContext);
   const [file, setFile] = useState(null);
   const [categoricalColumns, setCategoricalColumns] = useState("");
   const [numSamples, setNumSamples] = useState(1000);
@@ -19,24 +24,16 @@ const UploadForm = () => {
   const [serverStatus, setServerStatus] = useState("checking");
 
   useEffect(() => {
-    const checkServerHealth = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/health`);
-        if (response.data.status === "healthy") {
-          setServerStatus("online");
-          setError("");
-        } else {
-          setServerStatus("offline");
-          setError("Server is not responding properly");
-        }
-      } catch (err) {
-        setServerStatus("offline"); 
-        setError("Cannot connect to server");
-      }
-    };
-  
-    checkServerHealth();
-  }, []);
+    // Use the server status from context
+    setServerStatus(contextServerStatus);
+
+    if (contextServerStatus !== "online") {
+      setError("Server is not available");
+    } else {
+      // Remove fallback error message
+      setError("");
+    }
+  }, [contextServerStatus, usingFallback]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -108,7 +105,7 @@ const UploadForm = () => {
     formData.append("num_samples", numSamples);
 
     try {
-      const response = await axios.post(`${API_URL}/generate`, formData, {
+      const response = await axios.post(`${apiUrl}/generate`, formData, {
         responseType: "blob",
         headers: {
           "Content-Type": "multipart/form-data",
@@ -169,7 +166,7 @@ const UploadForm = () => {
           <div
             className={`w-2 h-2 rounded-full ${
               serverStatus === "online"
-                ? "bg-green-500"
+                ? "bg-green-500" // Always green for online, even during fallback
                 : serverStatus === "offline"
                 ? "bg-red-500"
                 : "bg-yellow-500 animate-pulse"

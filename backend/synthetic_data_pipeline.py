@@ -10,6 +10,10 @@ from typing import List, Dict, Optional
 import shutil
 import tempfile
 
+# Check pandas version
+logger = logging.getLogger(__name__)
+logger.info(f"Using pandas version: {pd.__version__}")
+
 class SyntheticDataPipeline:
     def __init__(
         self,

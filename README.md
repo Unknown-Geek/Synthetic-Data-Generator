@@ -1,3 +1,14 @@
+---
+title: Synthetic Data Generator
+emoji: 🧪
+colorFrom: blue
+colorTo: green
+sdk: gradio
+app_file: backend/app.py
+pinned: false
+license: mit
+---
+
 # Synthetic Data Generator
 
 A web application that generates synthetic data from CSV files while preserving statistical properties and privacy. The application uses CTGAN (Conditional Tabular GAN) to generate realistic synthetic data from categorical columns.
@@ -16,6 +27,7 @@ A web application that generates synthetic data from CSV files while preserving 
 The project consists of two main components:
 
 ### Frontend
+
 - Built with React.js and TailwindCSS
 - Features a modern glassmorphism UI design
 - Real-time server status monitoring
@@ -23,6 +35,7 @@ The project consists of two main components:
 - Progress tracking during generation
 
 ### Backend
+
 - Flask-based REST API
 - CTGAN implementation for synthetic data generation
 - Automatic data validation and preprocessing
@@ -39,12 +52,14 @@ The project consists of two main components:
 ## Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd synthetic-data-generator
 ```
 
 2. Set up the backend:
+
 ```bash
 cd backend
 python -m venv venv
@@ -53,6 +68,7 @@ pip install -r requirements.txt
 ```
 
 3. Set up the frontend:
+
 ```bash
 cd frontend
 npm install
@@ -61,20 +77,22 @@ npm install
 ### Alternatively (For Windows)
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd synthetic-data-generator
 ```
 
 2. Run the executable "run.bat" to directly run the application:
+
 ```bash
 .\run.bat
 ```
 
-
 ## Configuration
 
 1. Create a `.env` file in the frontend directory:
+
 ```
 REACT_APP_API_URL=http://localhost:8080
 ```
@@ -84,17 +102,21 @@ REACT_APP_API_URL=http://localhost:8080
 ## Running the Application
 
 1. Start the backend server:
+
 ```bash
 cd backend
 python app.py
 ```
-The backend will run on `http://localhost:8080`
+
+The backend will run on `http://localhost:7860`
 
 2. Start the frontend development server:
+
 ```bash
 cd frontend
 npm start
 ```
+
 The frontend will run on `http://localhost:3000`
 
 ## Usage
@@ -127,14 +149,15 @@ The frontend will run on `http://localhost:3000`
 
 - `GET /health` - Check server status
 - `POST /generate` - Generate synthetic data
-- Request: Multipart form data with:
-    - file : CSV file
-    - categorical_columns : Comma-separated column names
-    - num_samples : Number of samples to generate
+  - Request: Multipart form data with:
+    - file: CSV file
+    - categorical_columns: Comma-separated column names
+    - num_samples: Number of samples to generate
 
 ## Error Handling
 
 The application includes comprehensive error handling for:
+
 - Invalid file formats
 - Missing or invalid columns
 - Server connectivity issues

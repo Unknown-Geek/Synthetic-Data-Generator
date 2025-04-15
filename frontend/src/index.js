@@ -1,13 +1,14 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import './output.css';
-import UploadForm from './UploadForm';
-import { Analytics } from '@vercel/analytics/react';
+import React from "react";
+import ReactDOM from "react-dom";
+import "./output.css";
+import UploadForm from "./UploadForm";
+import { ApiProvider } from "./ApiContext";
 
 ReactDOM.render(
   <div className="dark">
-    <UploadForm />
-    <Analytics />
+    <ApiProvider>
+      <UploadForm />
+    </ApiProvider>
   </div>,
-  document.getElementById('root')
+  document.getElementById("root")
 );
