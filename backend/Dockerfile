@@ -1,31 +1,48 @@
-# Read the doc: https://huggingface.co/docs/hub/spaces-sdks-docker
-# you will also find guides on how best to write your Dockerfile
+# Backend Dockerfile for Synthetic Data Generator
+# Supports both CPU and GPU-based synthetic data generation
 
-FROM python:3.9
+FROM python:3.11-slim
 
-RUN useradd -m -u 1000 user
-USER user
-ENV PATH="/home/user/.local/bin:$PATH"
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser
 
+# Set working directory
 WORKDIR /app
 
-COPY --chown=user ./requirements.txt requirements.txt
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir numpy && \
-    pip install --no-cache-dir pandas && \
-    pip install --no-cache-dir torch && \
+    pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
     pip install --no-cache-dir -r requirements.txt
 
-# Make sure directories exist for file operations
-RUN mkdir -p temp_uploads output
+# Create directories for file operations
+RUN mkdir -p temp_uploads output && \
+    chown -R appuser:appuser /app
 
-# Set production environment
+# Copy application code
+COPY --chown=appuser:appuser . .
+
+# Switch to non-root user
+USER appuser
+
+# Environment variables
 ENV ENVIRONMENT=production
-# Default to 2 workers per core for HF Spaces (2 vCPUs, 16GB RAM)
-ENV WORKERS_PER_CORE=2
-# Set a longer timeout for synthetic data generation
-ENV TIMEOUT=300
+ENV PORT=7860
+ENV PYTHONUNBUFFERED=1
 
-COPY --chown=user . /app
-# Use our new startup script instead of directly calling uvicorn
-CMD ["python", "start_server.py"]
+# Expose port
+EXPOSE 7860
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:7860/health')" || exit 1
+
+# Start the server with uvicorn (for better Windows/Docker compatibility)
+CMD ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]

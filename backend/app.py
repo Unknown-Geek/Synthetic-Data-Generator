@@ -29,6 +29,7 @@ try:
     
     try:
         from synthetic_data_pipeline import SyntheticDataPipeline
+        from gemini_generator import GeminiSyntheticGenerator, GenerationConfig, generate_synthetic_data_enhanced
         import time
     except ImportError as e:
         logger.error(f"Failed to import SyntheticDataPipeline: {str(e)}")
@@ -37,6 +38,8 @@ except ImportError as e:
     logger.error(f"Import error: {str(e)}")
     logger.error("Try checking package compatibility or downgrading packages")
     sys.exit(1)
+
+from typing import Optional
 
 app = FastAPI(title="Synthetic Data Generator")
 
@@ -171,6 +174,93 @@ async def generate_synthetic_data(
             status_code=500,
             content={"error": str(e)}
         )
+
+@app.post("/generate/enhanced")
+async def generate_enhanced_synthetic_data(
+    file: UploadFile = File(...),
+    categorical_columns: str = Form(...),
+    num_samples: int = Form(1000),
+    use_gemini: bool = Form(True)
+):
+    """
+    Generate synthetic data using hybrid CTGAN + Gemini approach.
+    
+    This endpoint provides higher quality synthetic data by combining:
+    - CTGAN for statistical structure and column correlations
+    - Gemini API for realistic, contextually appropriate values
+    
+    If Gemini API key is not configured, falls back to CTGAN-only.
+    """
+    try:
+        cleanup_output_directory(OUTPUT_FOLDER)
+        logger.info("Starting enhanced synthetic data generation")
+        
+        # Save uploaded file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.csv')
+        try:
+            contents = await file.read()
+            temp_file.write(contents)
+            temp_file.close()
+            filepath = temp_file.name
+            
+            # Parse categorical columns
+            categorical_columns_list = [
+                col.strip() 
+                for col in categorical_columns.replace('"', '').replace("'", '').split(',')
+                if col.strip()
+            ]
+            
+            if not categorical_columns_list:
+                return JSONResponse(
+                    status_code=400,
+                    content={"error": "No valid categorical columns provided"}
+                )
+            
+            logger.info(f"Enhanced generation with columns: {categorical_columns_list}")
+            logger.info(f"Samples requested: {num_samples}, Use Gemini: {use_gemini}")
+            
+            # Generate using hybrid approach
+            synthetic_data = generate_synthetic_data_enhanced(
+                input_file=filepath,
+                categorical_columns=categorical_columns_list,
+                num_samples=num_samples,
+                use_gemini=use_gemini,
+                epochs=100
+            )
+            
+            # Save output
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_path = os.path.join(OUTPUT_FOLDER, f"synthetic_enhanced_{timestamp}.csv")
+            synthetic_data.to_csv(output_path, index=False)
+            
+            logger.info(f"Enhanced synthetic data saved to: {output_path}")
+            
+            return FileResponse(
+                path=output_path,
+                filename="synthetic_data_enhanced.csv",
+                media_type="text/csv"
+            )
+        finally:
+            if os.path.exists(filepath):
+                os.unlink(filepath)
+                
+    except Exception as e:
+        logger.error(f"Error in enhanced generation: {str(e)}")
+        logger.error(traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
+
+@app.get("/gemini/status")
+async def gemini_status():
+    """Check if Gemini API is configured and available."""
+    generator = GeminiSyntheticGenerator()
+    return {
+        "available": generator.is_available,
+        "message": "Gemini API ready" if generator.is_available else "Gemini API key not configured"
+    }
 
 # Add this section to run the server when the script is executed directly
 if __name__ == "__main__":

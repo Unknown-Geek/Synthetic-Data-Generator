@@ -22,6 +22,7 @@ const UploadForm = () => {
   const [availableColumns, setAvailableColumns] = useState([]);
   const [selectedColumns, setSelectedColumns] = useState([]);
   const [serverStatus, setServerStatus] = useState("checking");
+  const [useEnhanced, setUseEnhanced] = useState(true); // Use Gemini-enhanced generation
 
   useEffect(() => {
     // Use the server status from context
@@ -108,9 +109,15 @@ const UploadForm = () => {
     formData.append("file", file);
     formData.append("categorical_columns", categoricalColumns.trim());
     formData.append("num_samples", numSamples);
+    
+    // Use enhanced endpoint if enabled
+    const endpoint = useEnhanced ? "/generate/enhanced" : "/generate";
+    if (useEnhanced) {
+      formData.append("use_gemini", "true");
+    }
 
     try {
-      const response = await axios.post(`${apiUrl}/generate`, formData, {
+      const response = await axios.post(`${apiUrl}${endpoint}`, formData, {
         responseType: "blob",
         headers: {
           "Content-Type": "multipart/form-data",
@@ -308,6 +315,57 @@ const UploadForm = () => {
               min="1"
               className="w-full bg-gray-800/50 text-white border border-gray-700/50 rounded-lg p-3 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/50 transition-all duration-300"
             />
+          </motion.div>
+
+          <motion.div
+            className="md:col-span-2"
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
+          >
+            <label className="block text-white mb-2 font-semibold text-2xl">
+              Generation Mode
+            </label>
+            <div className="flex gap-6">
+              <motion.button
+                type="button"
+                onClick={() => setUseEnhanced(true)}
+                className={`flex-1 py-3 px-4 rounded-lg transition-all duration-300 ${
+                  useEnhanced
+                    ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white glow-effect"
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <span className="font-semibold">✨ Enhanced</span>
+                  <span className="text-xs opacity-75">CTGAN + Gemini AI</span>
+                </div>
+              </motion.button>
+              <motion.button
+                type="button"
+                onClick={() => setUseEnhanced(false)}
+                className={`flex-1 py-3 px-4 rounded-lg transition-all duration-300 ${
+                  !useEnhanced
+                    ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white glow-effect"
+                    : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <span className="font-semibold">⚡ Standard</span>
+                  <span className="text-xs opacity-75">CTGAN Only</span>
+                </div>
+              </motion.button>
+            </div>
+            <p className="text-gray-400 text-sm mt-2 text-center">
+              {useEnhanced 
+                ? "Higher quality with varied, contextual data"
+                : "Fast generation using statistical patterns only"
+              }
+            </p>
           </motion.div>
         </div>
 

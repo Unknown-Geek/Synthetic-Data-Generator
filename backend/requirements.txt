@@ -1,15 +1,26 @@
-flask==2.0.1
-flask-cors==3.0.10
-pandas==2.1.1
-numpy<2.0.0
---only-binary=:all: scikit-learn
-scikit-learn<1.4.0
-ctgan
-rdt==1.13.2
+# Web framework
+flask>=3.0.0
+flask-cors>=4.0.0
+werkzeug>=3.0.0
+
+# Data processing
+pandas>=2.2.0
+numpy>=1.26.0,<2.1.0
+
+# Machine Learning
+scikit-learn>=1.4.0
+ctgan>=0.10.0
+rdt>=1.13.0
 torch>=2.2.0
-werkzeug==2.0.3
-gunicorn==21.2.0
-psutil==5.9.4
-fastapi
-uvicorn[standard]
-python-multipart
+
+# AI Generation (Gemini)
+google-genai>=1.0.0
+
+# FastAPI server
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# Deployment
+gunicorn>=21.2.0
+psutil>=5.9.0

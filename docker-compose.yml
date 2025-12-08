@@ -1,0 +1,49 @@
+# Docker Compose for Synthetic Data Generator
+# Usage: docker-compose up --build
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: synthetic-data-backend
+    ports:
+      - "7860:7860"
+    environment:
+      - ENVIRONMENT=production
+      - PORT=7860
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    volumes:
+      - backend-output:/app/output
+      - backend-temp:/app/temp_uploads
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7860/health')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://localhost:7860
+        - REACT_APP_PRODUCTION_API_URL=http://backend:7860
+    container_name: synthetic-data-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  backend-output:
+  backend-temp:
+
+
+networks:
+  default:
+    name: synthetic-data-network
